@@ -51,8 +51,18 @@ func GetClusters(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-
-	tour, err := getTourDays(city, tourDays)
+	tourModel := &models.Tour{}
+	database.DB.Db.
+		Where("city_id = ?", city.ID).
+		Where("start_lat = ?", startingLat).
+		Where("start_lng = ?", startingLng).
+		Where("days_count = ?", tourDays).
+		Preload("Days.Parks.DayPark").
+		First(&tourModel)
+	if tourModel.ID != 0 {
+		return c.Status(200).JSON(tourModel)
+	}
+	days, err := getTourDays(city, tourDays)
 	if err != nil {
 		return c.Status(500).JSON(map[string]string{
 			"type":    "INTERNAL_ERROR",
@@ -60,7 +70,7 @@ func GetClusters(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-	sortParks(tour, startingLat, startingLng)
+	sortParks(days, startingLat, startingLng)
 
 	mapsClient, err := maps.New()
 	if err != nil {
@@ -70,9 +80,19 @@ func GetClusters(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
+
+	tour := &models.Tour{
+		CityID:    city.ID,
+		DaysCount: tourDays,
+		StartLat:  startingLat,
+		StartLng:  startingLng,
+	}
+	database.DB.Db.Save(&tour)
+
 	ctx := context.Background()
-	for _, day := range tour {
+	for _, day := range days {
 		day.DirectionsURL, err = mapsClient.GetDrivingDirections(&ctx, &models.Location{startingLat, startingLng}, day.Parks)
+		day.TourID = tour.ID
 		if err != nil {
 			return c.Status(500).JSON(map[string]string{
 				"type":    "INTERNAL_ERROR",
@@ -81,8 +101,18 @@ func GetClusters(c *fiber.Ctx) error {
 			})
 		}
 	}
+	database.DB.Db.Save(&days)
+	for _, day := range days {
+		for _, park := range day.Parks {
+			database.DB.Db.Save(&models.DayPark{
+				DayID:  day.ID,
+				ParkID: park.ID,
+				Order:  park.Sort,
+			})
+		}
+	}
 
-	return c.Status(200).JSON(tour)
+	return c.Status(200).JSON(days)
 }
 
 func sortParks(tourDaysArr []*models.Day, startingLat float64, startingLng float64) {

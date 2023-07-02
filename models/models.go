@@ -16,8 +16,11 @@ func (l Location) ToString() string {
 
 type Tour struct {
 	gorm.Model
-	CityID uint
-	Days   int
+	CityID    uint
+	DaysCount int
+	StartLat  float64
+	StartLng  float64
+	Days      []Day
 }
 
 type Park struct {
@@ -29,6 +32,7 @@ type Park struct {
 	PlaceID   string
 	Sort      int `sql:"-" gorm:"-"`
 	City      *City
+	DayPark   *DayPark
 }
 
 func (p Park) LatLngString() string {
@@ -49,13 +53,14 @@ func (c City) ToLocationName() string {
 
 type Day struct {
 	gorm.Model
+	TourID        uint
 	Name          string
 	DirectionsURL string
 	Parks         []*Park `gorm:"many2many:day_parks;"`
 }
 
 type DayPark struct {
-	DayID  int `gorm:"primaryKey"`
-	ParkID int `gorm:"primaryKey"`
+	DayID  uint `gorm:"primaryKey"`
+	ParkID uint `gorm:"primaryKey"`
 	Order  int
 }

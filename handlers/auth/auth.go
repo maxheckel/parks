@@ -72,7 +72,7 @@ func Callback(ctx *fiber.Ctx) error {
 	}
 
 	// Redirect to logged in page.
-	return ctx.Redirect("/user", http.StatusTemporaryRedirect)
+	return ctx.Redirect("/account/user", http.StatusTemporaryRedirect)
 }
 
 func Login(ctx *fiber.Ctx) error {

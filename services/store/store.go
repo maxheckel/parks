@@ -1,5 +1,10 @@
 package store
 
-import session2 "github.com/gofiber/fiber/v2/middleware/session"
+import (
+	"github.com/gofiber/fiber/v2/middleware/session"
+	"time"
+)
 
-var Store = session2.New()
+var Store = session.New(session.Config{
+	Expiration: time.Hour * 24 * 365,
+})
